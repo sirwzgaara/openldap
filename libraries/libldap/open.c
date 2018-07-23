@@ -36,12 +36,13 @@
 #include "ldap_log.h"
 
 /* Caller must hold the conn_mutex since simultaneous accesses are possible */
-int ldap_open_defconn( LDAP *ld )
+int ldap_open_defconn(LDAP *ld)
 {
-	ld->ld_defconn = ldap_new_connection( ld,
-		&ld->ld_options.ldo_defludp, 1, 1, NULL, 0, 0 );
+	ld->ld_defconn = ldap_new_connection(ld,
+		&ld->ld_options.ldo_defludp, 1, 1, NULL, 0, 0);
 
-	if( ld->ld_defconn == NULL ) {
+	if (ld->ld_defconn == NULL) 
+	{
 		ld->ld_errno = LDAP_SERVER_DOWN;
 		return -1;
 	}
@@ -59,83 +60,86 @@ int ldap_open_defconn( LDAP *ld )
  *	LDAP	*ld;
  *	ld = ldap_open( hostname, port );
  */
-
-LDAP *
-ldap_open( LDAP_CONST char *host, int port )
+LDAP * ldap_open(LDAP_CONST char *host, int port)
 {
 	int rc;
-	LDAP		*ld;
+	LDAP *ld;
 
-	Debug( LDAP_DEBUG_TRACE, "ldap_open(%s, %d)\n",
-		host, port, 0 );
+	Debug(LDAP_DEBUG_TRACE, "ldap_open(%s, %d)\n", host, port, 0);
 
-	ld = ldap_init( host, port );
-	if ( ld == NULL ) {
+	ld = ldap_init(host, port);
+	if (ld == NULL) 
+	{
 		return( NULL );
 	}
 
-	LDAP_MUTEX_LOCK( &ld->ld_conn_mutex );
-	rc = ldap_open_defconn( ld );
-	LDAP_MUTEX_UNLOCK( &ld->ld_conn_mutex );
+	LDAP_MUTEX_LOCK(&ld->ld_conn_mutex);
+	rc = ldap_open_defconn(ld);
+	LDAP_MUTEX_UNLOCK(&ld->ld_conn_mutex);
 
-	if( rc < 0 ) {
-		ldap_ld_free( ld, 0, NULL, NULL );
+	if (rc < 0) 
+	{
+		ldap_ld_free(ld, 0, NULL, NULL);
 		ld = NULL;
 	}
 
-	Debug( LDAP_DEBUG_TRACE, "ldap_open: %s\n",
-		ld != NULL ? "succeeded" : "failed", 0, 0 );
+	Debug(LDAP_DEBUG_TRACE, "ldap_open: %s\n",
+		ld != NULL ? "succeeded" : "failed", 0, 0);
 
 	return ld;
 }
 
-
-
-int
-ldap_create( LDAP **ldp )
+int ldap_create(LDAP **ldp)
 {
-	LDAP			*ld;
-	struct ldapoptions	*gopts;
+	LDAP *ld;
+	struct ldapoptions *gopts;
 
 	*ldp = NULL;
 	/* Get pointer to global option structure */
-	if ( (gopts = LDAP_INT_GLOBAL_OPT()) == NULL) {
+	if ((gopts = LDAP_INT_GLOBAL_OPT()) == NULL)
+	{
 		return LDAP_NO_MEMORY;
 	}
 
 	/* Initialize the global options, if not already done. */
-	if( gopts->ldo_valid != LDAP_INITIALIZED ) {
+	if(gopts->ldo_valid != LDAP_INITIALIZED) 
+	{
 		ldap_int_initialize(gopts, NULL);
 		if ( gopts->ldo_valid != LDAP_INITIALIZED )
 			return LDAP_LOCAL_ERROR;
 	}
 
-	Debug( LDAP_DEBUG_TRACE, "ldap_create\n", 0, 0, 0 );
+	Debug(LDAP_DEBUG_TRACE, "ldap_create\n", 0, 0, 0);
 
-	if ( (ld = (LDAP *) LDAP_CALLOC( 1, sizeof(LDAP) )) == NULL ) {
-		return( LDAP_NO_MEMORY );
+	if ((ld = (LDAP *)LDAP_CALLOC(1, sizeof(LDAP))) == NULL) 
+	{
+		return(LDAP_NO_MEMORY);
 	}
    
-	if ( (ld->ldc = (struct ldap_common *) LDAP_CALLOC( 1,
-			sizeof(struct ldap_common) )) == NULL ) {
-		LDAP_FREE( (char *)ld );
-		return( LDAP_NO_MEMORY );
+	if ((ld->ldc = (struct ldap_common *)LDAP_CALLOC(1,
+			sizeof(struct ldap_common))) == NULL) 
+	{
+		LDAP_FREE((char *)ld);
+		return LDAP_NO_MEMORY;
 	}
+	
 	/* copy the global options */
-	LDAP_MUTEX_LOCK( &gopts->ldo_mutex );
+	LDAP_MUTEX_LOCK(&gopts->ldo_mutex);
 	AC_MEMCPY(&ld->ld_options, gopts, sizeof(ld->ld_options));
+	
 #ifdef LDAP_R_COMPILE
 	/* Properly initialize the structs mutex */
 	ldap_pvt_thread_mutex_init( &(ld->ld_ldopts_mutex) );
 #endif
-	LDAP_MUTEX_UNLOCK( &gopts->ldo_mutex );
+
+	LDAP_MUTEX_UNLOCK(&gopts->ldo_mutex);
 
 	ld->ld_valid = LDAP_VALID_SESSION;
 
 	/* but not pointers to malloc'ed items */
-	ld->ld_options.ldo_sctrls = NULL;
-	ld->ld_options.ldo_cctrls = NULL;
-	ld->ld_options.ldo_defludp = NULL;
+	ld->ld_options.ldo_sctrls   = NULL;
+	ld->ld_options.ldo_cctrls   = NULL;
+	ld->ld_options.ldo_defludp  = NULL;
 	ld->ld_options.ldo_conn_cbs = NULL;
 
 #ifdef HAVE_CYRUS_SASL
@@ -158,18 +162,22 @@ ldap_create( LDAP **ldp )
 	ld->ld_options.ldo_tls_ctx = NULL;
 #endif
 
-	if ( gopts->ldo_defludp ) {
+	if (gopts->ldo_defludp) 
+	{
 		ld->ld_options.ldo_defludp = ldap_url_duplist(gopts->ldo_defludp);
 
-		if ( ld->ld_options.ldo_defludp == NULL ) goto nomem;
+		if (ld->ld_options.ldo_defludp == NULL) 
+			goto nomem;
 	}
 
-	if (( ld->ld_selectinfo = ldap_new_select_info()) == NULL ) goto nomem;
+	if ((ld->ld_selectinfo = ldap_new_select_info()) == NULL) 
+		goto nomem;
 
 	ld->ld_lberoptions = LBER_USE_DER;
 
-	ld->ld_sb = ber_sockbuf_alloc( );
-	if ( ld->ld_sb == NULL ) goto nomem;
+	ld->ld_sb = ber_sockbuf_alloc();
+	if (ld->ld_sb == NULL)
+		goto nomem;
 
 #ifdef LDAP_R_COMPILE
 	ldap_pvt_thread_mutex_init( &ld->ld_msgid_mutex );
@@ -205,33 +213,32 @@ nomem:
  *	LDAP	*ld;
  *	ld = ldap_init( host, port );
  */
-LDAP *
-ldap_init( LDAP_CONST char *defhost, int defport )
+LDAP * ldap_init(LDAP_CONST char *defhost, int defport)
 {
 	LDAP *ld;
 	int rc;
 
 	rc = ldap_create(&ld);
-	if ( rc != LDAP_SUCCESS )
+	if (rc != LDAP_SUCCESS)
 		return NULL;
 
 	if (defport != 0)
 		ld->ld_options.ldo_defport = defport;
 
-	if (defhost != NULL) {
+	if (defhost != NULL) 
+	{
 		rc = ldap_set_option(ld, LDAP_OPT_HOST_NAME, defhost);
-		if ( rc != LDAP_SUCCESS ) {
+		if (rc != LDAP_SUCCESS) 
+		{
 			ldap_ld_free(ld, 1, NULL, NULL);
 			return NULL;
 		}
 	}
 
-	return( ld );
+	return ld;
 }
 
-
-int
-ldap_initialize( LDAP **ldp, LDAP_CONST char *url )
+int ldap_initialize(LDAP **ldp, LDAP_CONST char *url)
 {
 	int rc;
 	LDAP *ld;
@@ -241,9 +248,11 @@ ldap_initialize( LDAP **ldp, LDAP_CONST char *url )
 	if ( rc != LDAP_SUCCESS )
 		return rc;
 
-	if (url != NULL) {
+	if (url != NULL) 
+	{
 		rc = ldap_set_option(ld, LDAP_OPT_URI, url);
-		if ( rc != LDAP_SUCCESS ) {
+		if ( rc != LDAP_SUCCESS ) 
+		{
 			ldap_ld_free(ld, 1, NULL, NULL);
 			return rc;
 		}
@@ -257,8 +266,8 @@ ldap_initialize( LDAP **ldp, LDAP_CONST char *url )
 	return LDAP_SUCCESS;
 }
 
-int
-ldap_init_fd(
+int ldap_init_fd
+(
 	ber_socket_t fd,
 	int proto,
 	LDAP_CONST char *url,
@@ -277,9 +286,11 @@ ldap_init_fd(
 	if( rc != LDAP_SUCCESS )
 		return( rc );
 
-	if (url != NULL) {
+	if (url != NULL) 
+	{
 		rc = ldap_set_option(ld, LDAP_OPT_URI, url);
-		if ( rc != LDAP_SUCCESS ) {
+		if ( rc != LDAP_SUCCESS ) 
+		{
 			ldap_ld_free(ld, 1, NULL, NULL);
 			return rc;
 		}
@@ -299,7 +310,8 @@ ldap_init_fd(
 	++ld->ld_defconn->lconn_refcnt;	/* so it never gets closed/freed */
 	LDAP_MUTEX_UNLOCK( &ld->ld_conn_mutex );
 
-	switch( proto ) {
+	switch( proto ) 
+	{
 	case LDAP_PROTO_TCP:
 #ifdef LDAP_DEBUG
 		ber_sockbuf_add_io( conn->lconn_sb, &ber_sockbuf_io_debug,
@@ -362,19 +374,21 @@ ldap_init_fd(
 }
 
 /* Protected by ld_conn_mutex */
-int
-ldap_int_open_connection(
+int ldap_int_open_connection
+(
 	LDAP *ld,
 	LDAPConn *conn,
 	LDAPURLDesc *srv,
-	int async )
+	int async
+)
 {
 	int rc = -1;
 	int proto;
 
 	Debug( LDAP_DEBUG_TRACE, "ldap_int_open_connection\n", 0, 0, 0 );
 
-	switch ( proto = ldap_pvt_url_scheme2proto( srv->lud_scheme ) ) {
+	switch ( proto = ldap_pvt_url_scheme2proto( srv->lud_scheme ) ) 
+	{
 		case LDAP_PROTO_TCP:
 			rc = ldap_connect_to_host( ld, conn->lconn_sb,
 				proto, srv, async );
@@ -489,8 +503,7 @@ ldap_int_open_connection(
  * note: ldap_init_fd() may be preferable
  */
 
-int
-ldap_open_internal_connection( LDAP **ldp, ber_socket_t *fdp )
+int ldap_open_internal_connection( LDAP **ldp, ber_socket_t *fdp )
 {
 	int rc;
 	LDAPConn *c;
@@ -549,8 +562,7 @@ ldap_open_internal_connection( LDAP **ldp, ber_socket_t *fdp )
 	return( LDAP_SUCCESS );
 }
 
-LDAP *
-ldap_dup( LDAP *old )
+LDAP * ldap_dup( LDAP *old )
 {
 	LDAP			*ld;
 
@@ -571,8 +583,7 @@ ldap_dup( LDAP *old )
 	return ( ld );
 }
 
-int
-ldap_int_check_async_open( LDAP *ld, ber_socket_t sd )
+int ldap_int_check_async_open( LDAP *ld, ber_socket_t sd )
 {
 	struct timeval tv = { 0 };
 	int rc;
